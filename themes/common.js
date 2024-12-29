@@ -938,10 +938,27 @@ function gpt_academic_gradio_saveload(
     }
 }
 
+function generateUUID() {
+    // Generate a random number and convert it to a hexadecimal string
+    function randomHexDigit() {
+        return Math.floor((1 + Math.random()) * 0x10000).toString(16).slice(1);
+    }
+
+    // Construct the UUID using the randomHexDigit function
+    return (
+        randomHexDigit() + randomHexDigit() + '-' +
+        randomHexDigit() + '-' +
+        '4' + randomHexDigit().slice(0, 3) + '-' + // Version 4 UUID
+        ((Math.floor(Math.random() * 4) + 8).toString(16)) + randomHexDigit().slice(0, 3) + '-' +
+        randomHexDigit() + randomHexDigit() + randomHexDigit()
+    );
+}
+
 function update_conversation_metadata() {
     // Create a conversation UUID and timestamp
     try {
-        const conversationId = crypto.randomUUID();
+        const conversationId = generateUUID();
+        console.log('Create conversation ID:', conversationId);
         const timestamp = new Date().toISOString();
         const conversationData = {
             id: conversationId,
@@ -1065,11 +1082,24 @@ function clear_conversation(a, b, c) {
 function reset_conversation(a, b) {
     // console.log("js_code_reset");
     a = btoa(unescape(encodeURIComponent(JSON.stringify(a))));
-    setCookie("js_previous_chat_cookie", a, 1);
+    localStorage.setItem("js_previous_chat_cookie", a);
     b = btoa(unescape(encodeURIComponent(JSON.stringify(b))));
-    setCookie("js_previous_history_cookie", b, 1);
+    localStorage.setItem("js_previous_history_cookie", b);
     // gen_restore_btn();
     return [[], [], "已重置"];
+}
+
+
+// clear -> 将 history 缓存至 history_cache -> 点击复原 -> restore_previous_chat() -> 触发elem_update_history -> 读取 history_cache
+function restore_previous_chat() {
+    // console.log("restore_previous_chat");
+    let chat = localStorage.getItem("js_previous_chat_cookie");
+    chat = JSON.parse(decodeURIComponent(escape(atob(chat))));
+    push_data_to_gradio_component(chat, "gpt-chatbot", "obj");
+    let history = localStorage.getItem("js_previous_history_cookie");
+    history = JSON.parse(decodeURIComponent(escape(atob(history))));
+    push_data_to_gradio_component(history, "history-ng", "obj");
+    // document.querySelector("#elem_update_history").click(); // in order to call set_history_gr_state, and send history state to server
 }
 
 
